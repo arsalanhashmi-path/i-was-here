@@ -406,6 +406,7 @@ function closeSharePanel() {
 function buildShareCardSvg() {
   const timestamp = escapeSvg(shareTimestamp || formatShareTimestamp(new Date()));
   const country = escapeSvg(userCountry.name);
+  const witnessNumber = escapeSvg(witnessId || "recorded");
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
       <defs>
@@ -430,6 +431,7 @@ function buildShareCardSvg() {
       <text x="540" y="494" text-anchor="middle" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900">Spain vs Portugal</text>
       <text x="540" y="584" text-anchor="middle" fill="#d6cccc" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="700">at ${timestamp}</text>
       <text x="540" y="656" text-anchor="middle" fill="#b9b2b2" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">from ${country}</text>
+      <text x="540" y="724" text-anchor="middle" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900">Witness ${witnessNumber}</text>
       <rect x="210" y="824" width="660" height="112" rx="10" fill="#fff8f8"/>
       <text x="540" y="895" text-anchor="middle" fill="#09090a" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="900">I WAS HERE</text>
       <rect x="210" y="1016" width="660" height="4" fill="url(#line)" opacity="0.7"/>
