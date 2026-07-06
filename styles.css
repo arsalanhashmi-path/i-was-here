@@ -493,6 +493,13 @@ h1 {
   font-size: 14px;
 }
 
+#leaderboardList li.empty-row {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  min-height: 48px;
+  text-align: center;
+}
+
 #leaderboardList li:first-child,
 #activityFeed li:first-child {
   border-top: 0;

@@ -71,7 +71,10 @@ const supabaseClient =
     ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.anonKey)
     : null;
 
-let countryData = fallbackCountries.map((country) => ({ ...country }));
+let countryData = fallbackCountries.map((country) => ({
+  ...country,
+  count: 0,
+}));
 let totalWitnesses = countryData.reduce((sum, country) => sum + country.count, 0);
 let pressed = localStorage.getItem(pressedKey) === "true";
 let witnessId = localStorage.getItem(witnessKey) || "";
@@ -88,15 +91,12 @@ async function init() {
   startBrowserClock();
   renderStats();
   renderLeaderboard();
-  seedFallbackActivity();
   applyPressedState();
   drawMap();
 
   if (supabaseClient) {
     await hydrateFromSupabase();
     subscribeToSupabase();
-  } else {
-    startFallbackTicker();
   }
 
   els.button.addEventListener("click", recordWitness);
@@ -154,7 +154,6 @@ async function hydrateFromSupabase() {
     renderEverything();
   } catch (error) {
     console.warn("Supabase unavailable; using fallback data.", error);
-    startFallbackTicker();
   }
 }
 
@@ -327,8 +326,20 @@ function renderStats() {
 
 function renderLeaderboard() {
   const topCountries = [...countryData]
+    .filter((country) => country.count > 0)
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+
+  if (!topCountries.length) {
+    els.leaderboard.innerHTML = `
+      <li class="empty-row">
+        <span></span>
+        <span class="country-name">Waiting for the first witnesses</span>
+        <span></span>
+      </li>
+    `;
+    return;
+  }
 
   els.leaderboard.innerHTML = topCountries
     .map(
@@ -427,7 +438,7 @@ async function drawMap() {
 function renderPoints() {
   if (!pointGroup || !projection) return;
   const topPoints = [...countryData]
-    .filter((country) => country.coords[0] || country.coords[1])
+    .filter((country) => country.count > 0 && (country.coords[0] || country.coords[1]))
     .sort((a, b) => b.count - a.count)
     .slice(0, 13);
 
@@ -449,6 +460,7 @@ function countryFill(id) {
   if (!country) return "rgba(255,255,255,0.095)";
 
   const max = Math.max(...countryData.map((item) => item.count));
+  if (!max) return "rgba(255,255,255,0.095)";
   const intensity = country.count / max;
   const alpha = 0.22 + intensity * 0.68;
   return `rgba(224, 7, 24, ${alpha})`;

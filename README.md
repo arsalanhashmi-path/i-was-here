@@ -24,6 +24,8 @@ Deploy the whole folder as a static site on Netlify, Vercel, Cloudflare Pages, o
 4. Put your Project URL and anon public key in `config.js`.
 5. Deploy the whole folder.
 
+If you previously ran the first demo seed and see the old fake `1,563,255` style counts, run `reset-live-counts.sql` once in Supabase. It recalculates totals from actual `witness_events` and removes the seeded demo numbers without deleting email signups.
+
 The anon key is safe to ship in frontend code. Witness presses happen through the `record_witness` RPC. Email signups insert into `email_signups`; public clients can insert but cannot read the email list.
 
-If `config.js` is blank, the site falls back to realistic demo data.
+If `config.js` is blank, the site runs in local-only mode with zero starting counts.

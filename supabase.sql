@@ -33,32 +33,32 @@ create table if not exists public.email_signups (
 );
 
 insert into public.app_stats (id, total_count)
-values (true, 1563255)
+values (true, 0)
 on conflict (id) do nothing;
 
 insert into public.witness_countries
   (code, name, topo_id, longitude, latitude, count)
 values
-  ('PT', 'Portugal', 620, -8.2, 39.5, 184211),
-  ('BR', 'Brazil', 76, -52, -10, 171904),
-  ('IN', 'India', 356, 78.9, 22, 140002),
-  ('US', 'United States', 840, -98.5, 39.8, 132881),
-  ('PK', 'Pakistan', 586, 69.3, 30.3, 98504),
-  ('GB', 'United Kingdom', 826, -2.5, 54, 87510),
-  ('AR', 'Argentina', 32, -64, -34, 84872),
-  ('ES', 'Spain', 724, -3.7, 40.3, 79244),
-  ('MA', 'Morocco', 504, -6, 32, 69301),
-  ('FR', 'France', 250, 2.2, 46.2, 67220),
-  ('SA', 'Saudi Arabia', 682, 45, 24, 58840),
-  ('NG', 'Nigeria', 566, 8, 9, 55210),
-  ('DE', 'Germany', 276, 10.4, 51.1, 53414),
-  ('MX', 'Mexico', 484, -102, 23, 50230),
-  ('JP', 'Japan', 392, 138, 37, 44720),
-  ('ZA', 'South Africa', 710, 24, -29, 40116),
-  ('ID', 'Indonesia', 360, 113, -2, 38902),
-  ('EG', 'Egypt', 818, 30, 27, 37220),
-  ('IT', 'Italy', 380, 12.5, 42.8, 35544),
-  ('CA', 'Canada', 124, -106, 57, 33410)
+  ('PT', 'Portugal', 620, -8.2, 39.5, 0),
+  ('BR', 'Brazil', 76, -52, -10, 0),
+  ('IN', 'India', 356, 78.9, 22, 0),
+  ('US', 'United States', 840, -98.5, 39.8, 0),
+  ('PK', 'Pakistan', 586, 69.3, 30.3, 0),
+  ('GB', 'United Kingdom', 826, -2.5, 54, 0),
+  ('AR', 'Argentina', 32, -64, -34, 0),
+  ('ES', 'Spain', 724, -3.7, 40.3, 0),
+  ('MA', 'Morocco', 504, -6, 32, 0),
+  ('FR', 'France', 250, 2.2, 46.2, 0),
+  ('SA', 'Saudi Arabia', 682, 45, 24, 0),
+  ('NG', 'Nigeria', 566, 8, 9, 0),
+  ('DE', 'Germany', 276, 10.4, 51.1, 0),
+  ('MX', 'Mexico', 484, -102, 23, 0),
+  ('JP', 'Japan', 392, 138, 37, 0),
+  ('ZA', 'South Africa', 710, 24, -29, 0),
+  ('ID', 'Indonesia', 360, 113, -2, 0),
+  ('EG', 'Egypt', 818, 30, 27, 0),
+  ('IT', 'Italy', 380, 12.5, 42.8, 0),
+  ('CA', 'Canada', 124, -106, 57, 0)
 on conflict (code) do update set
   name = excluded.name,
   topo_id = excluded.topo_id,
@@ -95,13 +95,13 @@ begin
     updated_at = now();
 
   update public.app_stats
-  set total_count = total_count + 1,
+  set total_count = public.app_stats.total_count + 1,
       updated_at = now()
   where id = true
   returning public.app_stats.total_count into next_total;
 
   update public.witness_countries
-  set count = count + 1,
+  set count = public.witness_countries.count + 1,
       updated_at = now()
   where code = normalized_code
   returning public.witness_countries.count into next_country_count;
