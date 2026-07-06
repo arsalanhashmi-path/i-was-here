@@ -119,6 +119,26 @@ begin
 end;
 $$;
 
+create or replace function public.get_live_country_counts()
+returns table (
+  country_code text,
+  country_name text,
+  witness_count bigint
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    event.country_code,
+    max(event.country_name) as country_name,
+    count(*)::bigint as witness_count
+  from public.witness_events as event
+  group by event.country_code
+  order by witness_count desc;
+$$;
+
 alter table public.app_stats enable row level security;
 alter table public.witness_countries enable row level security;
 alter table public.witness_events enable row level security;
@@ -155,6 +175,7 @@ grant select on public.witness_events to anon, authenticated;
 grant insert on public.email_signups to anon, authenticated;
 grant usage, select on sequence public.email_signups_id_seq to anon, authenticated;
 grant execute on function public.record_witness(text, text) to anon, authenticated;
+grant execute on function public.get_live_country_counts() to anon, authenticated;
 
 do $$
 begin

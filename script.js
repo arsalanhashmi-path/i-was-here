@@ -21,6 +21,56 @@ const fallbackCountries = [
   { code: "CA", id: 124, name: "Canada", count: 33410, coords: [-106, 57] },
 ];
 
+const allCountryCodes = [
+  "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM",
+  "AW", "AU", "AT", "AZ", "BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ",
+  "BM", "BT", "BO", "BQ", "BA", "BW", "BV", "BR", "IO", "BN", "BG", "BF",
+  "BI", "KH", "CM", "CA", "CV", "KY", "CF", "TD", "CL", "CN", "CX", "CC",
+  "CO", "KM", "CG", "CD", "CK", "CR", "CI", "HR", "CU", "CW", "CY", "CZ",
+  "DK", "DJ", "DM", "DO", "EC", "EG", "SV", "GQ", "ER", "EE", "SZ", "ET",
+  "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF", "GA", "GM", "GE", "DE",
+  "GH", "GI", "GR", "GL", "GD", "GP", "GU", "GT", "GG", "GN", "GW", "GY",
+  "HT", "HM", "VA", "HN", "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE",
+  "IM", "IL", "IT", "JM", "JP", "JE", "JO", "KZ", "KE", "KI", "KP", "KR",
+  "KW", "KG", "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU", "MO",
+  "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT", "MX",
+  "FM", "MD", "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP",
+  "NL", "NC", "NZ", "NI", "NE", "NG", "NU", "NF", "MK", "MP", "NO", "OM",
+  "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT", "PR",
+  "QA", "RE", "RO", "RU", "RW", "BL", "SH", "KN", "LC", "MF", "PM", "VC",
+  "WS", "SM", "ST", "SA", "SN", "RS", "SC", "SL", "SG", "SX", "SK", "SI",
+  "SB", "SO", "ZA", "GS", "SS", "ES", "LK", "SD", "SR", "SJ", "SE", "CH",
+  "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO", "TT", "TN", "TR",
+  "TM", "TC", "TV", "UG", "UA", "AE", "GB", "US", "UM", "UY", "UZ", "VU",
+  "VE", "VN", "VG", "VI", "WF", "EH", "YE", "ZM", "ZW",
+];
+
+const countryNameOverrides = {
+  AX: "Aland Islands",
+  BQ: "Caribbean Netherlands",
+  CD: "DR Congo",
+  CG: "Congo",
+  CI: "Cote d'Ivoire",
+  CZ: "Czechia",
+  FK: "Falkland Islands",
+  FM: "Micronesia",
+  GB: "United Kingdom",
+  IR: "Iran",
+  KP: "North Korea",
+  KR: "South Korea",
+  LA: "Laos",
+  MD: "Moldova",
+  MK: "North Macedonia",
+  PS: "Palestine",
+  RU: "Russia",
+  SY: "Syria",
+  TZ: "Tanzania",
+  US: "United States",
+  VA: "Vatican City",
+  VE: "Venezuela",
+  VN: "Vietnam",
+};
+
 const countryByRegion = {
   PK: "Pakistan",
   PT: "Portugal",
@@ -59,11 +109,20 @@ const els = {
   emailForm: document.querySelector("#emailForm"),
   emailInput: document.querySelector("#emailInput"),
   emailStatus: document.querySelector("#emailStatus"),
+  sharePanel: document.querySelector("#sharePanel"),
+  sharePreview: document.querySelector("#sharePreview"),
+  shareStatus: document.querySelector("#shareStatus"),
+  shareNativeButton: document.querySelector("#shareNativeButton"),
+  shareXButton: document.querySelector("#shareXButton"),
+  shareFacebookButton: document.querySelector("#shareFacebookButton"),
+  shareInstagramButton: document.querySelector("#shareInstagramButton"),
+  downloadCardButton: document.querySelector("#downloadCardButton"),
 };
 
 const formatter = new Intl.NumberFormat("en-US");
 const pressedKey = "i-was-here-pressed";
 const witnessKey = "i-was-here-witness-id";
+const shareTimestampKey = "i-was-here-share-timestamp";
 const fallbackIncrementKey = "i-was-here-fallback-increment";
 const supabaseConfig = window.I_WAS_HERE_SUPABASE || {};
 const hasSupabaseConfig = Boolean(supabaseConfig.url && supabaseConfig.anonKey);
@@ -79,6 +138,8 @@ let countryData = fallbackCountries.map((country) => ({
 let totalWitnesses = countryData.reduce((sum, country) => sum + country.count, 0);
 let pressed = localStorage.getItem(pressedKey) === "true";
 let witnessId = localStorage.getItem(witnessKey) || "";
+let shareTimestamp = localStorage.getItem(shareTimestampKey) || "";
+let sharePngUrl = "";
 let projection;
 let path;
 let mapGroup;
@@ -104,6 +165,11 @@ async function init() {
   els.button.addEventListener("click", recordWitness);
   els.countrySelect.addEventListener("change", updateSelectedCountry);
   els.emailForm.addEventListener("submit", collectEmail);
+  els.shareNativeButton.addEventListener("click", shareNative);
+  els.shareXButton.addEventListener("click", shareToX);
+  els.shareFacebookButton.addEventListener("click", shareToFacebook);
+  els.shareInstagramButton.addEventListener("click", shareToInstagram);
+  els.downloadCardButton.addEventListener("click", downloadShareCard);
 }
 
 function startBrowserClock() {
@@ -131,7 +197,7 @@ async function hydrateFromSupabase() {
           .from("witness_events")
           .select("country_code,country_name,created_at", { count: "exact" })
           .order("created_at", { ascending: false })
-          .limit(10000),
+          .limit(7),
       ]);
 
     if (countries?.length) {
@@ -144,10 +210,7 @@ async function hydrateFromSupabase() {
       }));
     }
 
-    const eventCounts = new Map();
-    events?.forEach((event) => {
-      eventCounts.set(event.country_code, (eventCounts.get(event.country_code) || 0) + 1);
-    });
+    const eventCounts = await getLiveCountryCounts();
 
     countryData.forEach((country) => {
       country.count = eventCounts.get(country.code) || 0;
@@ -170,6 +233,47 @@ async function hydrateFromSupabase() {
   } catch (error) {
     console.warn("Supabase unavailable; using fallback data.", error);
   }
+}
+
+async function getLiveCountryCounts() {
+  const { data: liveCounts, error } = await supabaseClient.rpc("get_live_country_counts");
+  const eventCounts = new Map();
+
+  if (!error && liveCounts) {
+    liveCounts.forEach((event) => {
+      eventCounts.set(event.country_code, Number(event.witness_count));
+      if (!countryData.some((country) => country.code === event.country_code)) {
+        countryData.push({
+          code: event.country_code,
+          id: 999000 + Math.abs(hashCountryCode(event.country_code) % 999),
+          name: event.country_name,
+          count: 0,
+          coords: [0, 0],
+        });
+      }
+    });
+    return eventCounts;
+  }
+
+  const { data: events } = await supabaseClient
+    .from("witness_events")
+    .select("country_code,country_name,created_at")
+    .limit(10000);
+
+  events?.forEach((event) => {
+    eventCounts.set(event.country_code, (eventCounts.get(event.country_code) || 0) + 1);
+    if (!countryData.some((country) => country.code === event.country_code)) {
+      countryData.push({
+        code: event.country_code,
+        id: 999000 + Math.abs(hashCountryCode(event.country_code) % 999),
+        name: event.country_name,
+        count: 0,
+        coords: [0, 0],
+      });
+    }
+  });
+
+  return eventCounts;
 }
 
 function subscribeToSupabase() {
@@ -221,6 +325,7 @@ async function recordWitnessWithSupabase() {
 }
 
 function recordWitnessLocally() {
+  ensureCountryData(userCountry);
   const country = countryData.find((item) => item.code === userCountry.code) || countryData[0];
   totalWitnesses += 1;
   country.count += 1;
@@ -274,10 +379,152 @@ async function collectEmail(event) {
       : "You're on the list for the final witness map.";
 }
 
+async function renderShareCard() {
+  const svg = buildShareCardSvg();
+  sharePngUrl = await svgToPng(svg, 1080, 1350);
+  els.sharePreview.src = sharePngUrl;
+  els.sharePanel.hidden = false;
+  els.shareStatus.textContent = "PNG card ready.";
+}
+
+function buildShareCardSvg() {
+  const timestamp = escapeSvg(shareTimestamp || formatShareTimestamp(new Date()));
+  const country = escapeSvg(userCountry.name);
+  return `
+    <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="42%" r="68%">
+          <stop offset="0%" stop-color="#e00718" stop-opacity="0.36"/>
+          <stop offset="48%" stop-color="#3b0509" stop-opacity="0.52"/>
+          <stop offset="100%" stop-color="#050506" stop-opacity="1"/>
+        </radialGradient>
+        <linearGradient id="line" x1="0%" x2="100%">
+          <stop offset="0%" stop-color="#e00718"/>
+          <stop offset="100%" stop-color="#ffffff"/>
+        </linearGradient>
+      </defs>
+      <rect width="1080" height="1350" fill="#050506"/>
+      <rect width="1080" height="1350" fill="url(#glow)"/>
+      <circle cx="540" cy="494" r="270" fill="none" stroke="#e00718" stroke-opacity="0.16" stroke-width="3"/>
+      <circle cx="540" cy="494" r="196" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+      <rect x="88" y="92" width="34" height="76" rx="2" fill="none" stroke="#fff8f8" stroke-opacity="0.85" stroke-width="4"/>
+      <rect x="88" y="151" width="34" height="17" fill="#e00718"/>
+      <text x="144" y="142" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="800">I WAS HERE</text>
+      <text x="540" y="404" text-anchor="middle" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="72" font-weight="900">I was watching</text>
+      <text x="540" y="494" text-anchor="middle" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="88" font-weight="900">Spain vs Portugal</text>
+      <text x="540" y="584" text-anchor="middle" fill="#d6cccc" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="700">at ${timestamp}</text>
+      <text x="540" y="656" text-anchor="middle" fill="#b9b2b2" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="700">from ${country}</text>
+      <rect x="210" y="824" width="660" height="112" rx="10" fill="#fff8f8"/>
+      <text x="540" y="895" text-anchor="middle" fill="#09090a" font-family="Inter, Arial, sans-serif" font-size="40" font-weight="900">I WAS HERE</text>
+      <rect x="210" y="1016" width="660" height="4" fill="url(#line)" opacity="0.7"/>
+      <text x="540" y="1090" text-anchor="middle" fill="#fff8f8" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800">A moment football may never see again.</text>
+      <text x="540" y="1188" text-anchor="middle" fill="#a49a9a" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">i-was-here</text>
+    </svg>
+  `;
+}
+
+function svgToPng(svg, width, height) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0, width, height);
+      URL.revokeObjectURL(svgUrl);
+      resolve(canvas.toDataURL("image/png"));
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      reject(new Error("Could not render share card."));
+    };
+
+    image.src = svgUrl;
+  });
+}
+
+async function shareNative() {
+  if (!sharePngUrl) await renderShareCard();
+  const text = shareText();
+
+  try {
+    const blob = await (await fetch(sharePngUrl)).blob();
+    const file = new File([blob], "i-was-here.png", { type: "image/png" });
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: "I Was Here", text });
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title: "I Was Here", text, url: location.href });
+      return;
+    }
+  } catch (error) {
+    console.warn("Native share unavailable.", error);
+  }
+
+  downloadShareCard();
+  els.shareStatus.textContent = "Sharing is not supported here, so the PNG was downloaded.";
+}
+
+function shareToX() {
+  window.open(
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText())}&url=${encodeURIComponent(location.href)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+function shareToFacebook() {
+  window.open(
+    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}&quote=${encodeURIComponent(shareText())}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+function shareToInstagram() {
+  downloadShareCard();
+  els.shareStatus.textContent = "PNG downloaded. Upload it to Instagram Stories or your feed.";
+}
+
+function downloadShareCard() {
+  if (!sharePngUrl) return;
+  const link = document.createElement("a");
+  link.href = sharePngUrl;
+  link.download = "i-was-here-spain-vs-portugal.png";
+  link.click();
+}
+
+function shareText() {
+  return `I was watching Spain vs Portugal at ${shareTimestamp || formatShareTimestamp(new Date())}.`;
+}
+
+function formatShareTimestamp(date) {
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function escapeSvg(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 function commitPressedState() {
   pressed = true;
+  shareTimestamp = formatShareTimestamp(new Date());
   localStorage.setItem(pressedKey, "true");
   localStorage.setItem(witnessKey, witnessId);
+  localStorage.setItem(shareTimestampKey, shareTimestamp);
 
   document.body.classList.remove("page-pulse");
   window.requestAnimationFrame(() => document.body.classList.add("page-pulse"));
@@ -290,10 +537,10 @@ function commitPressedState() {
 function getBrowserCountryGuess() {
   const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
   const region = locale.split("-").pop()?.toUpperCase();
-  const code = countryByRegion[region] ? region : "PK";
+  const code = allCountryCodes.includes(region) ? region : "PK";
   return {
     code,
-    name: countryByRegion[code] || "Pakistan",
+    name: countryNameForCode(code),
   };
 }
 
@@ -312,9 +559,12 @@ function populateCountryPicker() {
 }
 
 function countryOptions() {
-  const countries = [...fallbackCountries].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  const countries = allCountryCodes
+    .map((code) => ({
+      code,
+      name: countryNameForCode(code),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (!countries.some((country) => country.code === userCountry.code)) {
     countries.unshift({ ...userCountry, name: userCountry.name });
@@ -324,7 +574,7 @@ function countryOptions() {
 }
 
 function updateSelectedCountry() {
-  const selected = fallbackCountries.find(
+  const selected = countryOptions().find(
     (country) => country.code === els.countrySelect.value,
   );
   if (!selected) return;
@@ -332,14 +582,46 @@ function updateSelectedCountry() {
     code: selected.code,
     name: selected.name,
   };
+  ensureCountryData(userCountry);
 }
 
 function applyPressedState() {
   if (!pressed) return;
+  if (!shareTimestamp) {
+    shareTimestamp = formatShareTimestamp(new Date());
+    localStorage.setItem(shareTimestampKey, shareTimestamp);
+  }
   els.button.disabled = false;
   els.button.textContent = "You were here";
   els.button.classList.add("is-pressed");
   els.witnessId.textContent = `Last witness: ${witnessId || "recorded"} from ${userCountry.name}`;
+  renderShareCard();
+}
+
+function countryNameForCode(code) {
+  if (countryNameOverrides[code]) return countryNameOverrides[code];
+  if (countryByRegion[code]) return countryByRegion[code];
+
+  try {
+    return new Intl.DisplayNames(["en"], { type: "region" }).of(code) || code;
+  } catch (error) {
+    return code;
+  }
+}
+
+function ensureCountryData(country) {
+  if (countryData.some((item) => item.code === country.code)) return;
+  countryData.push({
+    code: country.code,
+    id: 999000 + Math.abs(hashCountryCode(country.code) % 999),
+    name: country.name,
+    count: 0,
+    coords: [0, 0],
+  });
+}
+
+function hashCountryCode(code) {
+  return code.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
 }
 
 function renderEverything() {
