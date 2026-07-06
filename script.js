@@ -117,6 +117,7 @@ const els = {
   shareFacebookButton: document.querySelector("#shareFacebookButton"),
   shareInstagramButton: document.querySelector("#shareInstagramButton"),
   downloadCardButton: document.querySelector("#downloadCardButton"),
+  shareCloseButton: document.querySelector("#shareCloseButton"),
 };
 
 const formatter = new Intl.NumberFormat("en-US");
@@ -170,6 +171,13 @@ async function init() {
   els.shareFacebookButton.addEventListener("click", shareToFacebook);
   els.shareInstagramButton.addEventListener("click", shareToInstagram);
   els.downloadCardButton.addEventListener("click", downloadShareCard);
+  els.shareCloseButton.addEventListener("click", closeSharePanel);
+  els.sharePanel.addEventListener("click", (event) => {
+    if (event.target === els.sharePanel) closeSharePanel();
+  });
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeSharePanel();
+  });
 }
 
 function startBrowserClock() {
@@ -383,8 +391,16 @@ async function renderShareCard() {
   const svg = buildShareCardSvg();
   sharePngUrl = await svgToPng(svg, 1080, 1350);
   els.sharePreview.src = sharePngUrl;
-  els.sharePanel.hidden = false;
   els.shareStatus.textContent = "PNG card ready.";
+}
+
+async function openSharePanel() {
+  await renderShareCard();
+  els.sharePanel.hidden = false;
+}
+
+function closeSharePanel() {
+  els.sharePanel.hidden = true;
 }
 
 function buildShareCardSvg() {
@@ -532,6 +548,7 @@ function commitPressedState() {
   renderEverything();
   addActivity(userCountry.name, "now");
   pulseUserCountry();
+  openSharePanel();
 }
 
 function getBrowserCountryGuess() {
@@ -587,15 +604,10 @@ function updateSelectedCountry() {
 
 function applyPressedState() {
   if (!pressed) return;
-  if (!shareTimestamp) {
-    shareTimestamp = formatShareTimestamp(new Date());
-    localStorage.setItem(shareTimestampKey, shareTimestamp);
-  }
   els.button.disabled = false;
   els.button.textContent = "You were here";
   els.button.classList.add("is-pressed");
   els.witnessId.textContent = `Last witness: ${witnessId || "recorded"} from ${userCountry.name}`;
-  renderShareCard();
 }
 
 function countryNameForCode(code) {
