@@ -118,18 +118,17 @@ function startBrowserClock() {
 
 async function hydrateFromSupabase() {
   try {
-    const [{ data: stats }, { data: countries }, { data: events }] =
+    const [{ data: countries }, { data: events, count: eventCount }] =
       await Promise.all([
-        supabaseClient.from("app_stats").select("total_count").eq("id", true).single(),
         supabaseClient
           .from("witness_countries")
-          .select("code,name,topo_id,longitude,latitude,count")
-          .order("count", { ascending: false }),
+          .select("code,name,topo_id,longitude,latitude")
+          .order("name", { ascending: true }),
         supabaseClient
           .from("witness_events")
-          .select("country_name,created_at")
+          .select("country_code,country_name,created_at", { count: "exact" })
           .order("created_at", { ascending: false })
-          .limit(7),
+          .limit(10000),
       ]);
 
     if (countries?.length) {
@@ -137,19 +136,32 @@ async function hydrateFromSupabase() {
         code: country.code,
         id: country.topo_id,
         name: country.name,
-        count: Number(country.count),
+        count: 0,
         coords: [Number(country.longitude), Number(country.latitude)],
       }));
     }
 
-    totalWitnesses =
-      Number(stats?.total_count) ||
-      countryData.reduce((sum, country) => sum + country.count, 0);
+    const eventCounts = new Map();
+    events?.forEach((event) => {
+      eventCounts.set(event.country_code, (eventCounts.get(event.country_code) || 0) + 1);
+    });
 
-    if (events?.length) {
-      els.feed.innerHTML = "";
-      events.forEach((event) => addActivity(event.country_name, relativeTime(event.created_at), false));
+    countryData.forEach((country) => {
+      country.count = eventCounts.get(country.code) || 0;
+    });
+
+    totalWitnesses = Number(eventCount) || events?.length || 0;
+
+    if (pressed) {
+      witnessId = `#${formatter.format(totalWitnesses)}`;
+      localStorage.setItem(witnessKey, witnessId);
+      applyPressedState();
     }
+
+    els.feed.innerHTML = "";
+    events
+      ?.slice(0, 7)
+      .forEach((event) => addActivity(event.country_name, relativeTime(event.created_at), false));
 
     renderEverything();
   } catch (error) {
@@ -165,25 +177,7 @@ function subscribeToSupabase() {
       { event: "INSERT", schema: "public", table: "witness_events" },
       (payload) => {
         addActivity(payload.new.country_name, "now");
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "witness_countries" },
-      (payload) => {
-        const updated = payload.new;
-        const country = countryData.find((item) => item.code === updated.code);
-        if (!country) return;
-        country.count = Number(updated.count);
-        renderEverything();
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "app_stats" },
-      (payload) => {
-        totalWitnesses = Number(payload.new.total_count);
-        renderStats();
+        hydrateFromSupabase();
       },
     )
     .subscribe();
@@ -211,12 +205,8 @@ async function recordWitnessWithSupabase() {
 
     if (error) throw error;
 
-    const result = Array.isArray(data) ? data[0] : data;
-    totalWitnesses = Number(result.total_count);
-    witnessId = `#${formatter.format(result.witness_number)}`;
-
-    const country = countryData.find((item) => item.code === result.country_code);
-    if (country) country.count = Number(result.country_count);
+    await hydrateFromSupabase();
+    witnessId = `#${formatter.format(totalWitnesses)}`;
 
     commitPressedState();
   } catch (error) {
