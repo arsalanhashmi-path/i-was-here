@@ -55,6 +55,7 @@ const els = {
   tooltip: document.querySelector("#tooltip"),
   loading: document.querySelector("#mapLoading"),
   browserTime: document.querySelector("#browserTime"),
+  countrySelect: document.querySelector("#countrySelect"),
   emailForm: document.querySelector("#emailForm"),
   emailInput: document.querySelector("#emailInput"),
   emailStatus: document.querySelector("#emailStatus"),
@@ -83,12 +84,13 @@ let path;
 let mapGroup;
 let pointGroup;
 
-const userCountry = getUserCountry();
+let userCountry = getBrowserCountryGuess();
 
 init();
 
 async function init() {
   startBrowserClock();
+  populateCountryPicker();
   renderStats();
   renderLeaderboard();
   applyPressedState();
@@ -100,6 +102,7 @@ async function init() {
   }
 
   els.button.addEventListener("click", recordWitness);
+  els.countrySelect.addEventListener("change", updateSelectedCountry);
   els.emailForm.addEventListener("submit", collectEmail);
 }
 
@@ -284,13 +287,50 @@ function commitPressedState() {
   pulseUserCountry();
 }
 
-function getUserCountry() {
+function getBrowserCountryGuess() {
   const locale = Intl.DateTimeFormat().resolvedOptions().locale || "";
   const region = locale.split("-").pop()?.toUpperCase();
   const code = countryByRegion[region] ? region : "PK";
   return {
     code,
     name: countryByRegion[code] || "Pakistan",
+  };
+}
+
+function populateCountryPicker() {
+  const selectedCode = userCountry.code;
+  els.countrySelect.innerHTML = countryOptions()
+    .map(
+      (country) => `
+        <option value="${country.code}" ${country.code === selectedCode ? "selected" : ""}>
+          ${country.name}
+        </option>
+      `,
+    )
+    .join("");
+  updateSelectedCountry();
+}
+
+function countryOptions() {
+  const countries = [...fallbackCountries].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+
+  if (!countries.some((country) => country.code === userCountry.code)) {
+    countries.unshift({ ...userCountry, name: userCountry.name });
+  }
+
+  return countries;
+}
+
+function updateSelectedCountry() {
+  const selected = fallbackCountries.find(
+    (country) => country.code === els.countrySelect.value,
+  );
+  if (!selected) return;
+  userCountry = {
+    code: selected.code,
+    name: selected.name,
   };
 }
 

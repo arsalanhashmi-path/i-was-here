@@ -189,6 +189,40 @@ h1 {
   text-align: center;
 }
 
+.country-picker {
+  display: grid;
+  gap: 8px;
+  width: min(320px, 100%);
+  color: var(--white-soft);
+  font-size: 12px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.country-picker select {
+  width: 100%;
+  min-height: 46px;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(45deg, transparent 50%, #fff8f8 50%) calc(100% - 18px) 19px / 6px 6px no-repeat,
+    linear-gradient(135deg, #fff8f8 50%, transparent 50%) calc(100% - 13px) 19px / 6px 6px no-repeat,
+    rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  padding: 0 38px 0 13px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 760;
+  text-transform: none;
+  outline: none;
+}
+
+.country-picker select:focus {
+  border-color: rgba(255, 255, 255, 0.56);
+  box-shadow: 0 0 0 3px rgba(224, 7, 24, 0.18);
+}
+
 .witness-button {
   min-width: 190px;
   min-height: 56px;
